@@ -11,6 +11,7 @@ from docx import Document
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from openai import OpenAI
+from tqdm import tqdm
 
 REVIEWER_AUTHOR = "reviewer3"
 REVIEWER_INITIALS = "rv3"
@@ -199,7 +200,7 @@ def review_docx(input_docx: Path, output_docx: Path | None = None, reviewer: Any
     previous_feedback: list[str] = []
     change_id = 1
 
-    for paragraph in doc.paragraphs:
+    for paragraph in tqdm(doc.paragraphs, desc="Reviewing paragraphs", unit="paragraph"):
         paragraph_text = paragraph.text.strip()
         if not paragraph_text:
             continue
