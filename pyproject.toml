@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "reviewer3"
+version = "0.1.0"
+description = "CLI reviewer for scientific DOCX texts using LLM feedback."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "openai>=1.0.0",
+  "python-docx>=1.2.0",
+]
+
+[project.scripts]
+reviewer3 = "reviewer3.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["reviewer3"]
