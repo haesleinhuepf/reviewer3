@@ -93,6 +93,9 @@ class LLMReviewer:
                     "regional_question: use word_group and comment as a constructive question. "
                     "global_feedback: document-level feedback with comment, word_group may be null, suggestion must be null. "
                     "Do not rewrite entire sections if a local edit is enough. "
+                    "Preserve all line breaks and every bracket character in a local replacement. "
+                    "Never add or remove (), [], {}, or <> merely because the supplied text starts or ends mid-paragraph. "
+                    "Do not propose a local modification whose word_group crosses a line break. "
                     "Use concise, actionable, and respectful feedback. "
                     "Write every comment in a natural first-person reviewer voice, as an experienced senior scientist. "
                     "Avoid templated boilerplate such as 'I read this and now I think ...'. "
@@ -154,6 +157,8 @@ class LLMReviewer:
                     "Write 2-3 sentences for about_document and 2-3 sentences for scientific_importance. "
                     "Use global_feedback for open questions and cross-section coherence points. "
                     "Use feedback_summary for a very short summary of local and regional feedback. "
+                    "End feedback_summary with a positive sentence expressing confidence that, once the raised points are addressed, "
+                    "the manuscript will make an excellent contribution. "
                     "Write every section in a natural first-person reviewer voice, as an experienced senior scientist. "
                     "Avoid templated boilerplate such as 'I read this and now I think ...'. "
                     "Keep this tone friendly, professional, and constructive. Motivate the author in a positive way. "
@@ -278,7 +283,8 @@ def _fallback_preface_summary(
         ),
         feedback_summary=(
             "I think the collected feedback is focused and actionable: "
-            f"{fallback_local_count} local modifications and {fallback_regional_count} regional questions."
+            f"{fallback_local_count} local modifications and {fallback_regional_count} regional questions. "
+            "Once these points are addressed, I am confident that the manuscript will make an excellent contribution."
         ),
     )
 
@@ -346,14 +352,14 @@ def _consume_feedback_stream(
 
 
 def _split_document(document_text: str, max_chars: int) -> list[str]:
-    """Split at paragraph boundaries, falling back to hard limits for huge paragraphs."""
+    """Split at paragraph boundaries and avoid cutting through words or brackets."""
     if not document_text:
         return []
 
     chunks: list[str] = []
     current = ""
     for paragraph in document_text.split("\n\n"):
-        parts = [paragraph[i : i + max_chars] for i in range(0, len(paragraph), max_chars)] or [""]
+        parts = _split_long_paragraph(paragraph, max_chars)
         for part in parts:
             separator = "\n\n" if current else ""
             if current and len(current) + len(separator) + len(part) > max_chars:
@@ -364,6 +370,33 @@ def _split_document(document_text: str, max_chars: int) -> list[str]:
     if current:
         chunks.append(current)
     return chunks
+
+
+def _split_long_paragraph(paragraph: str, max_chars: int) -> list[str]:
+    if not paragraph:
+        return [""]
+
+    parts: list[str] = []
+    start = 0
+    bracket_pairs = {")": "(", "]": "[", "}": "{", ">": "<"}
+    while len(paragraph) - start > max_chars:
+        limit = start + max_chars
+        stack: list[str] = []
+        safe_breaks: list[int] = []
+        for index in range(start, limit):
+            char = paragraph[index]
+            if char in "([{<":
+                stack.append(char)
+            elif char in bracket_pairs and stack and stack[-1] == bracket_pairs[char]:
+                stack.pop()
+            if not stack and (char.isspace() or char in ".!?;:"):
+                safe_breaks.append(index + 1)
+
+        end = safe_breaks[-1] if safe_breaks else limit
+        parts.append(paragraph[start:end])
+        start = end
+    parts.append(paragraph[start:])
+    return parts
 
 
 def _document_overview(document_text: str, max_chars: int) -> str:
@@ -636,7 +669,7 @@ def _isolate_run_text(run: Run, start: int, end: int) -> Run:
 
 
 def add_tracked_suggestion(paragraph: Any, suggestion_text: str, change_id: int) -> int:
-    suggestion = suggestion_text.strip()
+    suggestion = suggestion_text
     if not suggestion:
         return change_id
 
@@ -810,6 +843,25 @@ def _next_change_id(document: Document) -> int:
     return max_id + 1
 
 
+def _enable_track_revisions(document: Document) -> None:
+    settings = document.settings.element
+    if settings.find(qn("w:trackRevisions")) is None:
+        settings.append(OxmlElement("w:trackRevisions"))
+
+
+def _mark_paragraph_inserted(paragraph: Paragraph, change_id: int) -> None:
+    paragraph_properties = paragraph._p.get_or_add_pPr()
+    run_properties = paragraph_properties.find(qn("w:rPr"))
+    if run_properties is None:
+        run_properties = OxmlElement("w:rPr")
+        paragraph_properties.append(run_properties)
+    insertion = OxmlElement("w:ins")
+    insertion.set(qn("w:id"), str(change_id))
+    insertion.set(qn("w:author"), REVIEWER_AUTHOR)
+    insertion.set(qn("w:date"), datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"))
+    run_properties.append(insertion)
+
+
 def prepend_review_preface(document: Document, final_summary: PrefaceSummary) -> None:
     _insert_paragraph_at_start(document, "")
     feedback_paragraph = _insert_paragraph_at_start(
@@ -833,7 +885,10 @@ def prepend_review_preface(document: Document, final_summary: PrefaceSummary) ->
     _insert_paragraph_at_start(document, "Reviewer3")
 
 
-def _insert_paragraph_at_start(document: Document, text: str) -> Paragraph:
+def _insert_paragraph_at_start(document: Document, text: str | list[str]) -> Paragraph:
+    if isinstance(text, list):
+        text = "\n".join(f"• {item}" for item in text)
+
     if not document.paragraphs:
         paragraph = document.add_paragraph("")
     else:
@@ -842,8 +897,10 @@ def _insert_paragraph_at_start(document: Document, text: str) -> Paragraph:
         first_paragraph.addprevious(new_paragraph_xml)
         paragraph = Paragraph(new_paragraph_xml, first_paragraph.getparent())
 
+    paragraph_change_id = _next_change_id(document)
+    _mark_paragraph_inserted(paragraph, paragraph_change_id)
     if text:
-        _append_tracked_insert(paragraph, text, change_id=_next_change_id(document))
+        _append_tracked_insert(paragraph, text, change_id=paragraph_change_id + 1)
     return paragraph
 
 
@@ -859,10 +916,11 @@ def review_docx(input_docx: Path, output_docx: Path | None = None, reviewer: Any
     reviewer = reviewer or LLMReviewer.from_env()
 
     doc = Document(str(input_path))
-    change_id = 1
+    _enable_track_revisions(doc)
+    change_id = _next_change_id(doc)
 
     candidate_paragraphs = [paragraph for paragraph in doc.paragraphs if paragraph.text.strip()]
-    document_text = "\n\n".join(paragraph.text.strip() for paragraph in candidate_paragraphs)
+    document_text = "\n\n".join(paragraph.text for paragraph in candidate_paragraphs)
 
     feedback_entries: list[FeedbackEntry] = []
     if document_text and hasattr(reviewer, "review_document"):
@@ -870,9 +928,9 @@ def review_docx(input_docx: Path, output_docx: Path | None = None, reviewer: Any
 
     print(f"Collected {len(feedback_entries)} feedback entries.")
     # safe feedback to yml:
-    feedback_txt_path = output_path.with_suffix(".feedback.yml")
-    with open(feedback_txt_path, "w", encoding="utf-8") as f:
-        yaml.dump([entry.__dict__ for entry in feedback_entries], f)
+    #feedback_txt_path = output_path.with_suffix(".feedback.yml")
+    #with open(feedback_txt_path, "w", encoding="utf-8") as f:
+    #    yaml.dump([entry.__dict__ for entry in feedback_entries], f)
 
 
     for entry in feedback_entries:
@@ -887,6 +945,8 @@ def review_docx(input_docx: Path, output_docx: Path | None = None, reviewer: Any
             continue
 
         if entry.feedback_type == "local_modification" and entry.suggestion:
+            if not _preserves_layout_characters(entry.word_group, entry.suggestion):
+                continue
             new_paragraph_text = _replace_word_group_once(paragraph.text, entry.word_group, entry.suggestion)
             if new_paragraph_text.strip() and new_paragraph_text != paragraph.text:
                 change_id = add_tracked_suggestion(paragraph, new_paragraph_text, change_id=change_id)
@@ -938,3 +998,10 @@ def _replace_word_group_once(paragraph_text: str, word_group: str, suggestion: s
         return suggestion
 
     return paragraph_text
+
+
+def _preserves_layout_characters(original: str, suggestion: str) -> bool:
+    protected = set("\r\n()[]{}<>")
+    return [char for char in original if char in protected] == [
+        char for char in suggestion if char in protected
+    ]

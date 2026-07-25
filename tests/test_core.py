@@ -19,6 +19,7 @@ from reviewer3.core import (
     parse_feedback_entries,
     review_docx,
 )
+from reviewer3.core import _insert_paragraph_at_start, _preserves_layout_characters, _split_document
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
@@ -83,6 +84,34 @@ class _StreamingClientStub:
 
 
 class TestCore(unittest.TestCase):
+    def test_insert_paragraph_at_start_formats_string_list_as_bullets(self):
+        doc = Document()
+        doc.add_paragraph("Existing text")
+
+        paragraph = _insert_paragraph_at_start(doc, ["First item", "Second item"])
+
+        self.assertEqual("• First item\n• Second item", paragraph.text)
+
+    def test_insert_paragraph_at_start_keeps_string_unchanged(self):
+        doc = Document()
+
+        paragraph = _insert_paragraph_at_start(doc, "Plain text")
+
+        self.assertEqual("Plain text", paragraph.text)
+
+    def test_split_document_avoids_cutting_inside_brackets_when_possible(self):
+        text = "Prefix words (a bracketed phrase) suffix words."
+        chunks = _split_document(text, 35)
+
+        self.assertEqual(text, "".join(chunks))
+        self.assertTrue(all(len(chunk) <= 35 for chunk in chunks))
+        self.assertFalse(any("(" in chunk and ")" not in chunk for chunk in chunks))
+
+    def test_layout_guard_rejects_line_break_or_bracket_changes(self):
+        self.assertTrue(_preserves_layout_characters("alpha (beta)\ngamma", "delta (beta)\nepsilon"))
+        self.assertFalse(_preserves_layout_characters("alpha (beta)", "alpha beta"))
+        self.assertFalse(_preserves_layout_characters("alpha\nbeta", "alpha beta"))
+
     def test_regional_comment_is_anchored_to_word_group(self):
         doc = Document()
         paragraph = doc.add_paragraph()
@@ -165,6 +194,9 @@ class TestCore(unittest.TestCase):
 
             with zipfile.ZipFile(output_path) as archive:
                 document_xml = archive.read("word/document.xml").decode("utf-8")
+                settings_xml = archive.read("word/settings.xml").decode("utf-8")
+            self.assertIn("<w:trackRevisions", settings_xml)
+            self.assertIn("<w:pPr><w:rPr><w:ins", document_xml)
             method_paragraph = document_xml[document_xml.index("Paragraph two") :]
             method_paragraph = method_paragraph[: method_paragraph.index("</w:p>")]
             comment_start = method_paragraph.index("<w:commentRangeStart")
