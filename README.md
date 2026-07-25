@@ -45,6 +45,7 @@ Hardware note: Running `gpt-oss:20b` effectively requires a dedicated 8 GB GPU.
 - `REVIEWER3_API_KEY`: API key/token for the server (default: `ollama`)
 - `REVIEWER3_MODEL`: Model name to use (default: `gpt-oss:20b`)
 - `REVIEWER3_TEMPERATURE`: Sampling temperature (default: `0.2`)
+- `REVIEWER3_CHUNK_SIZE`: Maximum characters sent per review request (default: `12000`)
 
 Example (PowerShell):
 
