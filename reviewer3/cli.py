@@ -9,7 +9,7 @@ from reviewer3.core import LLMReviewer, default_output_path, review_docx
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="reviewer3",
-        description="Review scientific DOCX text paragraph-by-paragraph using an LLM.",
+        description="Review a full scientific DOCX document using an LLM and structured feedback entries.",
     )
     parser.add_argument("input_docx", type=Path, help="Path to input .docx file")
     parser.add_argument(

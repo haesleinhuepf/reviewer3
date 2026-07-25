@@ -7,6 +7,10 @@ name = "reviewer3"
 version = "0.1.0"
 description = "CLI reviewer for scientific DOCX texts using LLM feedback."
 readme = "README.md"
+authors = [
+  { name = "Robert Haase", email = "robert.haase@uni-leipzig.de" },
+]
+license = { text = "BSD-3-Clause" }
 requires-python = ">=3.10"
 dependencies = [
   "openai>=1.0.0",
