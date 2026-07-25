@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "reviewer3"
+version = "0.1.0"
+description = "CLI reviewer for scientific DOCX texts using LLM feedback."
+readme = "README.md"
+authors = [
+  { name = "Robert Haase", email = "robert.haase@uni-leipzig.de" },
+]
+license = { text = "BSD-3-Clause" }
+requires-python = ">=3.10"
+dependencies = [
+  "openai>=1.0.0",
+  "PyYAML>=6.0",
+  "python-docx>=1.2.0",
+  "tqdm>=4.66.0",
+]
+
+[project.scripts]
+reviewer3 = "reviewer3.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["reviewer3"]
