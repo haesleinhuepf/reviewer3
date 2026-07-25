@@ -13,6 +13,7 @@ from reviewer3.core import (
     LLMReviewer,
     FeedbackEntry,
     PrefaceSummary,
+    add_comment_to_word_group,
     add_tracked_suggestion,
     default_output_path,
     parse_feedback_entries,
@@ -82,6 +83,26 @@ class _StreamingClientStub:
 
 
 class TestCore(unittest.TestCase):
+    def test_regional_comment_is_anchored_to_word_group(self):
+        doc = Document()
+        paragraph = doc.add_paragraph()
+        paragraph.add_run("Text before ")
+        emphasized = paragraph.add_run("the word group")
+        emphasized.bold = True
+        paragraph.add_run(" and text after.")
+
+        add_comment_to_word_group(doc, paragraph, "the word group", "Could you clarify this?")
+
+        xml = paragraph._p.xml
+        range_start = xml.index("<w:commentRangeStart")
+        target = xml.index("the word group")
+        range_end = xml.index("<w:commentRangeEnd")
+        self.assertLess(xml.index("Text before "), range_start)
+        self.assertLess(range_start, target)
+        self.assertLess(target, range_end)
+        self.assertLess(range_end, xml.index(" and text after."))
+        self.assertTrue(emphasized.bold)
+
     def test_tracked_suggestion_preserves_zotero_and_footnote_xml(self):
         doc = Document()
         paragraph = doc.add_paragraph()
