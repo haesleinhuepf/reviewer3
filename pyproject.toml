@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "reviewer3"
-version = "0.1.0"
+version = "0.1.1"
 description = "A command line tool that uses LLMs to give constructive feedback about scientific .docx manuscripts."
 readme = "README.md"
 authors = [
