@@ -5,7 +5,7 @@ It is intended for personal use, if you need feedback about a document you wrote
 Per default it uses a locally installed, privacy-preserving large language model (LLM) via [ollama](https://ollama.com). Optionally, you can configure it to use LLMs on remote servers.
 In case you use it for reviewing manuscript of others, make sure to follow best-practices for preseving confidentiality! Do not submit manuscripts to remote servers if you`re not sure what service providers do with it. Also check institutional guidelines on the use of generative artificial intelligence for reviewing, e.g. [guidelines provided by the German Research Foundation](https://www.dfg.de/en/news/news-topics/announcements-proposals/2026/ifr-26-18). In general, the human reviewer is responsible for submitting a reviewed document, no matter what [artificial intelligence] tools they used for reviewing. Keep in mind that LLMs do mistakes and so does `reviewer3`.
 
-![](docs/screenshot.png)
+![](docs/examples/screenshot.png)
 
 `reviewer3` reads the document, potentially splits it in paragraphs, and asks an LLM for a structured feedback:
 - inline tracked edits (insertions/deletions) for text suggestions,
@@ -33,6 +33,19 @@ Install the CLI from PyPI:
 ```bash
 pip install reviewer3
 ```
+
+## Trying it out
+
+There are some example docx files in the docs/examples folder. Feel free to ask `reviewer3` to review them.
+
+```bash
+git clone https://github.com/haesleinhuepf/reviewer3
+cd reviewer3/docs/examples
+reviewer3 Haase_2021_Image_Processing_Filters.docx
+```
+
+`reviewer3` should then save a copy of the document with a preface, suggestions and comments as shown above.
+
 
 ## Local LLM Setup (Ollama)
 
