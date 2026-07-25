@@ -20,9 +20,9 @@ The original file is never overwritten. Output is written as `*_rv3.docx`.
 
 ## What `reviewer3` is not
 
-`reviewer3` is not intended for judging manuscripts. Many language models are not capable of drawing educated decisions about manuscript quality, scientific novelty or if manuscripts should be accepted or not for publishing. Instead, `reviewer3` is intended for providing constructive feedback, allowing to improve a manuscript, not matter how innovative or relevant it might be for the scientific society.
+`reviewer3` is not intended for judging manuscripts. Many language models are not capable of drawing educated decisions about manuscript quality, scientific novelty or if manuscripts should be accepted or not for publishing. Instead, `reviewer3` is intended for providing constructive feedback, allowing to improve a manuscript, no matter how innovative or relevant it might be for the scientific community.
 
-`reviewer3` is not a replacement for human reviewing. It can assist spotting obvious mistakes, or open questions. However, as it splits long documents in multiple blocks for reviewing, it may miss the big picture and may provide misleading suggestions. Review its suggestions and comments carfully, in particular if you use `reviewer3` for preparing feedback for people who asked _you_ to review their work.
+`reviewer3` is not a replacement for human reviewing. It can assist spotting obvious mistakes, or open questions. However, as it splits long documents in multiple blocks for reviewing, it may miss the big picture and may provide misleading suggestions. Review its suggestions and comments carefully, in particular if you use `reviewer3` for preparing feedback for people who asked _you_ to review their work.
 
 `reviewer3` cannot give feedback about figures yet. It only processes the text in manuscript files.
 
@@ -109,4 +109,10 @@ export REVIEWER3_MODEL="your-model-name"
 
 Contributions are welcome! Consider opening an issue first to discuss potential improvements, before preparing a pull-request. Note that `reviewer3` was largely vibe-coded using Github Copilot and OpenAI Codex integrations in Visual Studio Code. Consider using similar tools for modifying the code.
 
+## Similar projects
+
+* [OpenReviewer](https://github.com/maxidl/openreviewer)
+* [rigorous](https://github.com/Agentic-Systems-Lab/rigorous)
+* [SciWrite](https://github.com/labarba/sciwrite)
+* [AgentReview](https://github.com/ahren09/agentreview)
 
