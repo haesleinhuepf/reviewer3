@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "reviewer3"
 version = "0.1.0"
-description = "CLI reviewer for scientific DOCX texts using LLM feedback."
+description = "A command line tool that uses LLMs to give constructive feedback about scientific .docx manuscripts."
 readme = "README.md"
 authors = [
   { name = "Robert Haase", email = "robert.haase@uni-leipzig.de" },
