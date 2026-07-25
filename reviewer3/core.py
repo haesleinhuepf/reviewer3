@@ -14,7 +14,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
 from docx.text.run import Run
-from openai import OpenAI
+from openai import OpenAI, __version__
 import yaml
 
 REVIEWER_AUTHOR = "reviewer3"
@@ -239,6 +239,15 @@ def parse_preface_summary(
             fallback_regional_count=fallback_regional_count,
         ).feedback_summary
 
+    base_url = os.getenv("REVIEWER3_BASE_URL", "http://localhost:11434/v1")
+    model = os.getenv("REVIEWER3_MODEL", "gpt-oss:20b")
+
+    feedback_summary = feedback_summary + f"""
+
+This review was AI-generated using reviewer3 tool (version {__version__}) with the model {model} at {base_url}.
+Read more: https://github.com/haesleinhuepf/reviewer3
+"""
+    
     return PrefaceSummary(
         about_document=about_document,
         scientific_importance=scientific_importance,
