@@ -1,6 +1,6 @@
 # reviewer3
 
-`reviewer3` is a pip-installable command line reviewer for scientific `.docx` manuscripts. 
+`reviewer3` is a command line tool that uses LLMs to give constructive feedback about scientific `.docx` manuscripts. 
 It is intended for personal use, if you need feedback about a document you wrote yourself.
 Per default it uses a locally installed, privacy-preserving large language model (LLM) via [ollama](https://ollama.com). Optionally, you can configure it to use LLMs on remote servers.
 In case you use it for reviewing manuscript of others, make sure to follow best-practices for preseving confidentiality! Do not submit manuscripts to remote servers if you`re not sure what service providers do with it. Also check institutional guidelines on the use of generative artificial intelligence for reviewing, e.g. [guidelines provided by the German Research Foundation](https://www.dfg.de/en/news/news-topics/announcements-proposals/2026/ifr-26-18). In general, the human reviewer is responsible for submitting a reviewed document, no matter what [artificial intelligence] tools they used for reviewing. Keep in mind that LLMs do mistakes and so does `reviewer3`.
