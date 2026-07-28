@@ -18,6 +18,14 @@ dependencies = [
   "python-docx>=1.2.0",
   "tqdm>=4.66.0",
 ]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
 
 [project.scripts]
 reviewer3 = "reviewer3.cli:main"
@@ -31,11 +39,4 @@ Homepage = "https://github.com/haesleinhuepf/reviewer3/"
 Repository = "https://github.com/haesleinhuepf/reviewer3"
 Issues = "https://github.com/haesleinhuepf/reviewer3/issues"
 
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-]
+
