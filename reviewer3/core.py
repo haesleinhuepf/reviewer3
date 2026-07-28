@@ -734,7 +734,6 @@ def add_tracked_suggestion(paragraph: Any, word_group: str, suggestion: str, cha
                 change_id,
             ):
                 deleted_text = run.text[match_start - offset : match_end - offset]
-                print("Deleted:", deleted_text, "Inserted:", inserted_text)
                 return change_id + bool(deleted_text) + bool(inserted_text)
             return change_id
         offset = run_end
