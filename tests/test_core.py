@@ -146,7 +146,7 @@ class TestCore(unittest.TestCase):
         footnote_run.append(footnote_reference)
         paragraph._p.append(footnote_run)
 
-        next_id = add_tracked_suggestion(paragraph, "Clarify this wording", change_id=7)
+        next_id = add_tracked_suggestion(paragraph, "Improve", "Clarify", change_id=7)
 
         xml = paragraph._p.xml
         self.assertEqual(9, next_id)
@@ -154,6 +154,36 @@ class TestCore(unittest.TestCase):
         self.assertIn("footnoteReference", xml)
         self.assertIn("w:del", xml)
         self.assertIn("w:ins", xml)
+
+    def test_tracked_suggestion_is_anchored_to_first_matched_word_group(self):
+        doc = Document()
+        paragraph = doc.add_paragraph("prefix aaaaab suffix")
+
+        next_id = add_tracked_suggestion(paragraph, "aaa", "aa", change_id=3)
+
+        xml = paragraph._p.xml
+        self.assertEqual(5, next_id)
+        self.assertIn('<w:t xml:space="preserve">prefix </w:t><w:del', xml)
+        self.assertIn('<w:delText>a</w:delText>', xml)
+        self.assertIn('<w:t>aab suffix</w:t>', xml)
+
+    def test_tracked_suggestion_only_tracks_added_punctuation(self):
+        doc = Document()
+        paragraph = doc.add_paragraph("This is nearly the same sentence.")
+
+        next_id = add_tracked_suggestion(
+            paragraph,
+            "This is nearly the same sentence.",
+            "This is nearly, the same sentence.",
+            change_id=11,
+        )
+
+        xml = paragraph._p.xml
+        self.assertEqual(12, next_id)
+        self.assertNotIn("<w:del", xml)
+        self.assertIn("<w:t>This is nearly</w:t><w:ins", xml)
+        self.assertIn("<w:t>,</w:t>", xml)
+        self.assertIn('<w:t xml:space="preserve"> the same sentence.</w:t>', xml)
 
     def test_default_output_path(self):
         self.assertEqual(
