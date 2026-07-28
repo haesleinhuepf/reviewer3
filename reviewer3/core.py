@@ -677,51 +677,64 @@ def _isolate_run_text(run: Run, start: int, end: int) -> Run:
     return selected_run
 
 
-def add_tracked_suggestion(paragraph: Any, suggestion_text: str, change_id: int) -> int:
-    suggestion = suggestion_text
-    if not suggestion:
+def add_tracked_suggestion(paragraph: Any, word_group: str, suggestion: str, change_id: int) -> int:
+    if not word_group.strip() or not suggestion:
         return change_id
 
-    original = paragraph.text
-    if suggestion == original:
+    runs = list(paragraph.runs)
+    original = "".join(run.text for run in runs)
+    if not original:
         return change_id
 
-    # Only replace the changed portion of one ordinary run. Rebuilding the whole
-    # paragraph destroys inline OOXML that python-docx does not model, including
-    # Zotero fields, footnote references, hyperlinks, bookmarks, and formatting.
-    prefix_length = 0
-    while (
-        prefix_length < len(original)
-        and prefix_length < len(suggestion)
-        and original[prefix_length] == suggestion[prefix_length]
-    ):
-        prefix_length += 1
+    match = re.search(re.escape(word_group), original, flags=re.IGNORECASE)
+    if match is None:
+        if original.strip().lower() != word_group.strip().lower():
+            return change_id
+        match_start = 0
+        match_end = len(original)
+    else:
+        match_start = match.start()
+        match_end = match.end()
 
-    suffix_length = 0
-    while (
-        suffix_length < len(original) - prefix_length
-        and suffix_length < len(suggestion) - prefix_length
-        and original[-(suffix_length + 1)] == suggestion[-(suffix_length + 1)]
-    ):
-        suffix_length += 1
+    matched_text = original[match_start:match_end]
+    if matched_text == suggestion:
+        return change_id
 
-    original_end = len(original) - suffix_length
-    suggestion_end = len(suggestion) - suffix_length
-    deleted_text = original[prefix_length:original_end]
-    inserted_text = suggestion[prefix_length:suggestion_end]
+    common_prefix_length = 0
+    for original_char, suggestion_char in zip(matched_text, suggestion):
+        if original_char != suggestion_char:
+            break
+        common_prefix_length += 1
+
+    common_suffix_length = 0
+    max_suffix_length = min(
+        len(matched_text) - common_prefix_length,
+        len(suggestion) - common_prefix_length,
+    )
+    while (
+        common_suffix_length < max_suffix_length
+        and matched_text[-common_suffix_length - 1] == suggestion[-common_suffix_length - 1]
+    ):
+        common_suffix_length += 1
+
+    match_start += common_prefix_length
+    match_end -= common_suffix_length
+    suggestion_end = len(suggestion) - common_suffix_length if common_suffix_length else len(suggestion)
+    inserted_text = suggestion[common_prefix_length:suggestion_end]
 
     offset = 0
-    for run in paragraph.runs:
+    for run in runs:
         run_end = offset + len(run.text)
-        if offset <= prefix_length and original_end <= run_end:
+        if offset <= match_start and match_end <= run_end:
             if _replace_text_in_simple_run(
                 run,
-                prefix_length - offset,
-                original_end - offset,
-                deleted_text,
+                match_start - offset,
+                match_end - offset,
                 inserted_text,
                 change_id,
             ):
+                deleted_text = run.text[match_start - offset : match_end - offset]
+                print("Deleted:", deleted_text, "Inserted:", inserted_text)
                 return change_id + bool(deleted_text) + bool(inserted_text)
             return change_id
         offset = run_end
@@ -735,7 +748,6 @@ def _replace_text_in_simple_run(
     run: Any,
     start: int,
     end: int,
-    deleted_text: str,
     inserted_text: str,
     change_id: int,
 ) -> bool:
@@ -747,6 +759,9 @@ def _replace_text_in_simple_run(
 
     run_text = text_nodes[0].text or ""
     if not (0 <= start <= end <= len(run_text)):
+        return False
+    deleted_text = run_text[start:end]
+    if not deleted_text and not inserted_text:
         return False
 
     parent = run_element.getparent()
@@ -937,11 +952,11 @@ def review_docx(input_docx: Path, output_docx: Path | None = None, reviewer: Any
 
     print(f"Collected {len(feedback_entries)} feedback entries.")
     # safe feedback to yml:
-    #feedback_txt_path = output_path.with_suffix(".feedback.yml")
-    #with open(feedback_txt_path, "w", encoding="utf-8") as f:
-    #    yaml.dump([entry.__dict__ for entry in feedback_entries], f)
+    feedback_txt_path = output_path.with_suffix(".feedback.yml")
+    with open(feedback_txt_path, "w", encoding="utf-8") as f:
+        yaml.dump([entry.__dict__ for entry in feedback_entries], f)
 
-
+    counter = 0
     for entry in feedback_entries:
         if entry.feedback_type == "global_feedback":
             continue
@@ -956,9 +971,17 @@ def review_docx(input_docx: Path, output_docx: Path | None = None, reviewer: Any
         if entry.feedback_type == "local_modification" and entry.suggestion:
             if not _preserves_layout_characters(entry.word_group, entry.suggestion):
                 continue
-            new_paragraph_text = _replace_word_group_once(paragraph.text, entry.word_group, entry.suggestion)
-            if new_paragraph_text.strip() and new_paragraph_text != paragraph.text:
-                change_id = add_tracked_suggestion(paragraph, new_paragraph_text, change_id=change_id)
+            change_id_before = change_id
+            change_id = add_tracked_suggestion(
+                paragraph,
+                entry.word_group,
+                entry.suggestion,
+                change_id=change_id,
+            )
+            if change_id != change_id_before:
+                doc.save(str(output_path) + str(counter) + ".docx")
+                print(f"Saved revised document to {str(output_path) + str(counter) + '.docx'}")
+                counter = counter + 1
 
         if entry.feedback_type == "regional_question" and entry.comment:
             add_comment_to_word_group(doc, paragraph, entry.word_group, entry.comment)
@@ -992,21 +1015,6 @@ def _find_paragraph_by_word_group(paragraphs: list[Any], word_group: str) -> Any
         if paragraph_text and target_lower in paragraph_text.lower():
             return paragraph
     return None
-
-
-def _replace_word_group_once(paragraph_text: str, word_group: str, suggestion: str) -> str:
-    if not paragraph_text:
-        return paragraph_text
-
-    pattern = re.compile(re.escape(word_group), flags=re.IGNORECASE)
-    replaced_text, count = pattern.subn(suggestion, paragraph_text, count=1)
-    if count > 0:
-        return replaced_text
-
-    if paragraph_text.strip().lower() == word_group.strip().lower():
-        return suggestion
-
-    return paragraph_text
 
 
 def _preserves_layout_characters(original: str, suggestion: str) -> bool:
