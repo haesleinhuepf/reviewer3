@@ -24,3 +24,18 @@ reviewer3 = "reviewer3.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["reviewer3"]
+
+
+[project.urls]
+Homepage = "https://github.com/haesleinhuepf/reviewer3/"
+Repository = "https://github.com/haesleinhuepf/reviewer3"
+Issues = "https://github.com/haesleinhuepf/reviewer3/issues"
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
