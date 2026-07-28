@@ -132,11 +132,7 @@ class LLMReviewer:
                 tools=[],
                 tool_choice="none",
             )
-            return _consume_feedback_stream(
-                stream=stream,
-                document_text=document_text,
-                progress_callback=self._progress_callback,
-            )
+            return _consume_feedback_stream(stream)
         except Exception as exc:
             if self._progress_callback:
                 self._progress_callback(f"Review error: {type(exc).__name__}: {exc}")
@@ -298,31 +294,10 @@ def _fallback_preface_summary(
     )
 
 
-def _consume_feedback_stream(
-    stream: Any,
-    document_text: str,
-    progress_callback: Callable[[str], None] | None,
-) -> list[FeedbackEntry]:
+def _consume_feedback_stream(stream: Any) -> list[FeedbackEntry]:
     entries: list[FeedbackEntry] = []
     full_text = ""
     text_buffer = ""
-    normalized_text = document_text.lower()
-    text_length = max(1, len(document_text))
-
-    def report_progress(word_group: str | None, parsed_count: int) -> None:
-        if not progress_callback:
-            return
-        if not word_group:
-            progress_callback(f"Parsed {parsed_count} feedback entries...")
-            return
-        idx = normalized_text.find(word_group.lower())
-        if idx == -1:
-            progress_callback(f"Parsed {parsed_count} feedback entries (word_group not found yet).")
-            return
-        pct = int((idx / text_length) * 100)
-        progress_callback(
-            f"Parsed {parsed_count} feedback entries... document position {pct}% ({idx + 1}/{len(document_text)})"
-        )
 
     for chunk in stream:
         delta = chunk.choices[0].delta.content if chunk.choices else None
@@ -344,7 +319,6 @@ def _consume_feedback_stream(
             if not entry:
                 continue
             entries.append(entry)
-            report_progress(entry.word_group, len(entries))
 
     trailing_line = text_buffer.strip()
     if trailing_line:
@@ -353,7 +327,6 @@ def _consume_feedback_stream(
             entry = _entry_from_dict(parsed_line)
             if entry:
                 entries.append(entry)
-                report_progress(entry.word_group, len(entries))
 
     if not entries:
         entries = parse_feedback_entries(full_text)
