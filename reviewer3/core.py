@@ -952,9 +952,9 @@ def review_docx(input_docx: Path, output_docx: Path | None = None, reviewer: Any
 
     print(f"Collected {len(feedback_entries)} feedback entries.")
     # safe feedback to yml:
-    feedback_txt_path = output_path.with_suffix(".feedback.yml")
-    with open(feedback_txt_path, "w", encoding="utf-8") as f:
-        yaml.dump([entry.__dict__ for entry in feedback_entries], f)
+    #feedback_txt_path = output_path.with_suffix(".feedback.yml")
+    #with open(feedback_txt_path, "w", encoding="utf-8") as f:
+    #    yaml.dump([entry.__dict__ for entry in feedback_entries], f)
 
     counter = 0
     for entry in feedback_entries:
@@ -979,8 +979,6 @@ def review_docx(input_docx: Path, output_docx: Path | None = None, reviewer: Any
                 change_id=change_id,
             )
             if change_id != change_id_before:
-                doc.save(str(output_path) + str(counter) + ".docx")
-                print(f"Saved revised document to {str(output_path) + str(counter) + '.docx'}")
                 counter = counter + 1
 
         if entry.feedback_type == "regional_question" and entry.comment:
